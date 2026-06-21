@@ -1,0 +1,267 @@
+/* ── Bible Compare — Styles for ItemView (resizable pane) ─────── */
+
+/* ── Picker modal ─────────────────────────────────────────────── */
+.bible-compare-picker h2 {
+  margin: 0 0 4px 0;
+}
+.bible-compare-picker h3 {
+  margin: 16px 0 8px 0;
+  font-size: 0.95em;
+  opacity: 0.7;
+}
+.bible-compare-hint {
+  font-size: 0.85em;
+  opacity: 0.5;
+  margin: 0 0 12px 0;
+}
+.bible-compare-input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-primary);
+  color: var(--text-normal);
+  font-size: 1.05em;
+  box-sizing: border-box;
+}
+.bible-compare-input:focus {
+  outline: none;
+  border-color: var(--interactive-accent);
+  box-shadow: 0 0 0 2px var(--interactive-accent-hover);
+}
+.bible-compare-tx-list {
+  margin-bottom: 12px;
+}
+.bible-compare-tx-list .setting-item {
+  border: none;
+  padding: 4px 0;
+}
+.bible-compare-btn-row {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.bible-compare-btn {
+  padding: 8px 24px;
+  border-radius: 6px;
+  border: none;
+  font-size: 0.95em;
+  cursor: pointer;
+  font-weight: 600;
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+.bible-compare-btn:hover {
+  background: var(--interactive-accent-hover);
+}
+
+/* ── View pane ────────────────────────────────────────────────── */
+.bible-compare-view {
+  --bc-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Top bar */
+.bc-top-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--background-primary);
+  border-bottom: 1px solid var(--background-modifier-border);
+  flex-shrink: 0;
+}
+
+.bc-nav-btn {
+  background: none;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--bc-radius);
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: 1.1em;
+  color: var(--text-muted);
+  line-height: 1;
+}
+.bc-nav-btn:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+.bc-nav-disabled {
+  opacity: 0.3;
+  cursor: default;
+  pointer-events: none;
+}
+
+.bc-passage-input {
+  flex: 1;
+  padding: 6px 10px;
+  border-radius: var(--bc-radius);
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-primary);
+  color: var(--text-normal);
+  font-size: 0.95em;
+  min-width: 120px;
+}
+.bc-passage-input:focus {
+  outline: none;
+  border-color: var(--interactive-accent);
+}
+
+.bc-go-btn,
+.bc-pick-btn,
+.bc-single-btn {
+  padding: 6px 12px;
+  border-radius: var(--bc-radius);
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+  color: var(--text-normal);
+  cursor: pointer;
+  font-size: 0.85em;
+  white-space: nowrap;
+}
+.bc-go-btn:hover,
+.bc-pick-btn:hover,
+.bc-single-btn:hover {
+  background: var(--background-modifier-hover);
+}
+
+/* Content area — scrollable */
+.bc-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+  font-family: var(--font-text);
+}
+
+.bc-empty-hint {
+  opacity: 0.5;
+  text-align: center;
+  margin-top: 40px;
+}
+
+.bc-loading {
+  opacity: 0.5;
+  font-style: italic;
+}
+
+/* Result header row */
+.bc-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.bc-passage-heading {
+  margin: 0;
+  font-size: 1.3em;
+  font-weight: 700;
+}
+
+/* Chapter pills */
+.bc-chapter-pills {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.bc-chapter-pill {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 0.78em;
+  cursor: pointer;
+  color: var(--text-muted);
+  background: var(--background-secondary);
+  border: 1px solid transparent;
+}
+.bc-chapter-pill:hover {
+  background: var(--background-modifier-hover);
+  border-color: var(--background-modifier-border);
+}
+.bc-chapter-pill-active {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  font-weight: 600;
+  cursor: default;
+}
+
+.bc-copy-btn {
+  background: none;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--bc-radius);
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: 1em;
+}
+.bc-copy-btn:hover {
+  background: var(--background-modifier-hover);
+}
+
+/* ── Comparison grid ──────────────────────────────────────────── */
+.bc-grid {
+  display: flex;
+  gap: 12px;
+  user-select: text;
+}
+
+.bc-col {
+  flex: 1;
+  min-width: 0;
+  background: var(--background-secondary);
+  border-radius: var(--bc-radius);
+  padding: 14px 16px;
+  border: 1px solid var(--background-modifier-border);
+}
+
+.bc-single .bc-col {
+  background: var(--background-primary);
+  border-color: transparent;
+  padding: 0;
+}
+
+.bc-col-label {
+  margin: 0 0 10px 0;
+  font-size: 0.78em;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.6;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.bc-single .bc-col-label {
+  display: none;
+}
+
+.bc-col-error {
+  opacity: 0.5;
+  font-style: italic;
+  font-size: 0.9em;
+}
+
+.bc-para {
+  font-size: 0.95em;
+  line-height: 1.7;
+}
+
+.bc-single .bc-para {
+  font-size: 1em;
+  line-height: 1.75;
+  max-width: 680px;
+}
+
+/* Verse number bold markers (rendered via Obsidian markdown) */
+.bc-para strong {
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-right: 2px;
+}
+
+/* Column counts */
+.bc-cols-1 .bc-col { flex: 1; }
+.bc-cols-2 .bc-col { flex: 1; }
+.bc-cols-3 .bc-col { flex: 1; }

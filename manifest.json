@@ -1,0 +1,9 @@
+{
+  "id": "bible-compare",
+  "name": "Bible Compare",
+  "version": "1.0.0",
+  "minAppVersion": "0.15.0",
+  "description": "Compare Bible translations side-by-side in paragraph view. Reads Scripture (X) folders from the vault.",
+  "author": "cansas",
+  "isDesktopOnly": true
+}
