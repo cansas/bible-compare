@@ -231,9 +231,12 @@ module.exports = class BibleComparePlugin extends Plugin {
     const leaf = this.app.workspace.getLeaf(true);
     await leaf.setViewState({
       type: VIEW_TYPE,
-      state: data || {},
+      active: true,
     });
     this.app.workspace.revealLeaf(leaf);
+    if (leaf.view instanceof BibleCompareView) {
+      leaf.view.setState(data);
+    }
     return leaf;
   }
 };
