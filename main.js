@@ -638,8 +638,9 @@ class BibleCompareView extends ItemView {
         // Chapter separator for multi-passage results
         const multiChapter = r.chapters.length > 1;
         if (multiChapter) {
+          const bookName = data.passages[ci].bookName;
           const sep = col.createDiv({ cls: 'bc-chapter-sep' });
-          sep.createEl('span', { text: `\u2014 ${ch.chapter} \u2014`, cls: 'bc-chapter-sep-label' });
+          sep.createEl('span', { text: `\u2014 ${bookName} ${ch.chapter} \u2014`, cls: 'bc-chapter-sep-label' });
         }
 
         const para = col.createDiv({ cls: 'bc-para' });
@@ -678,7 +679,10 @@ class BibleCompareView extends ItemView {
       txt += `**${r.label}**\n`;
       r.chapters.forEach((ch, ci) => {
         const multiChapter = r.chapters.length > 1;
-        if (ci > 0) txt += `\u2014 Chapter ${ch.chapter} \u2014\n`;
+        if (ci > 0) {
+          const bookName = data.passages[ci].bookName;
+          txt += `\u2014 ${bookName} ${ch.chapter} \u2014\n`;
+        }
         const vk = Object.keys(ch.verses).map(Number).sort((a, b) => a - b);
         if (vk.length > 0) {
           vk.forEach(k => {
