@@ -6,7 +6,7 @@
  * Plain JavaScript, no build step.
  */
 
-const { Plugin, Modal, ItemView, Setting, Notice, WorkspaceLeaf, MarkdownRenderer } = require('obsidian');
+const { Plugin, Modal, ItemView, Setting, Notice, MarkdownRenderer } = require('obsidian');
 
 // ── Constants ──────────────────────────────────────────────────────
 const VIEW_TYPE = 'bible-compare-view';
@@ -121,17 +121,6 @@ function parsePassage(raw) {
   return { bookNum, bookName, chapter, verseStart, verseEnd };
 }
 
-function passageToString(p) {
-  let s = `${p.bookName} ${p.chapter}`;
-  if (p.verseStart !== null) {
-    s += `:${p.verseStart}`;
-    if (p.verseEnd && p.verseEnd !== p.verseStart) {
-      s += `\u2013${p.verseEnd}`;
-    }
-  }
-  return s;
-}
-
 // Parse "John 3:16; 6:1" or "Genesis 1" or "Ps 23:1-4; 6" — semicolon-separated passages
 // ponytail: continuation segments (no book name) use last book. No cross-book shorthand.
 function parsePassages(raw) {
@@ -198,12 +187,6 @@ function parseChapter(content) {
   return verses;
 }
 
-function htmlEscape(s) {
-  if (!s) return '';
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-          .replace(/\"/g, '&quot;');
-}
-
 // ── Plugin ─────────────────────────────────────────────────────────
 module.exports = class BibleComparePlugin extends Plugin {
   async onload() {
@@ -219,11 +202,6 @@ module.exports = class BibleComparePlugin extends Plugin {
       id: 'open-bible-reader',
       name: 'Open single-version reader',
       callback: () => new PassagePickerModal(this.app, this, { singleMode: true }).open(),
-    });
-
-    // Restore view if it was open when Obsidian last closed
-    this.app.workspace.onLayoutReady(() => {
-      // Nothing special needed — registerView handles restoration
     });
   }
 
@@ -645,7 +623,6 @@ class BibleCompareView extends ItemView {
           });
           swapSel.addEventListener('change', (e) => {
             const ci = results.indexOf(r);
-            const oldPath = data.translations[ci];
             const newPath = e.target.value;
             const tx = data.allTranslations.find(t => t.path === newPath);
             data.translations[ci] = newPath;
