@@ -261,6 +261,32 @@
   margin-right: 2px;
 }
 
+/* Chapter separators (multi-passage) */
+.bc-chapter-sep {
+  text-align: center;
+  margin: 16px 0 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--background-modifier-border);
+}
+.bc-chapter-sep-label {
+  font-size: 0.78em;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.5;
+}
+
+/* Multi-passage tag */
+.bc-multi-tag {
+  display: inline-block;
+  font-size: 0.7em;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 /* Column counts */
 .bc-cols-1 .bc-col { flex: 1; }
 .bc-cols-2 .bc-col { flex: 1; }

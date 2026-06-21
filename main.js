@@ -126,10 +126,41 @@ function passageToString(p) {
   if (p.verseStart !== null) {
     s += `:${p.verseStart}`;
     if (p.verseEnd && p.verseEnd !== p.verseStart) {
-      s += `–${p.verseEnd}`;
+      s += `\u2013${p.verseEnd}`;
     }
   }
   return s;
+}
+
+// Parse "John 3:16; 6:1" or "Genesis 1" or "Ps 23:1-4; 6" — semicolon-separated passages
+// ponytail: continuation segments (no book name) use last book. No cross-book shorthand.
+function parsePassages(raw) {
+  raw = raw.trim();
+  if (!raw) return null;
+  const segments = raw.split(';').map(s => s.trim()).filter(s => s);
+  if (segments.length === 0) return null;
+
+  let lastBookNum = null;
+  const results = [];
+
+  for (const seg of segments) {
+    let parsed = parsePassage(seg);
+    if (!parsed && lastBookNum !== null) {
+      // Continuation: "6" or "6:1-4" without a book name
+      const m = seg.match(/^(\d+)(?::(\d+)(?:\s*-\s*(\d+))?)?$/);
+      if (m) {
+        const chapter = parseInt(m[1], 10);
+        const verseStart = m[2] ? parseInt(m[2], 10) : null;
+        const verseEnd = m[3] ? parseInt(m[3], 10) : verseStart;
+        const bookName = BOOK_FOLDER_NAMES[lastBookNum].replace(/^\d+ - /, '');
+        parsed = { bookNum: lastBookNum, bookName, chapter, verseStart, verseEnd };
+      }
+    }
+    if (!parsed) return null;
+    lastBookNum = parsed.bookNum;
+    results.push(parsed);
+  }
+  return results;
 }
 
 // Get prev/next chapter boundaries
@@ -170,7 +201,7 @@ function parseChapter(content) {
 function htmlEscape(s) {
   if (!s) return '';
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;');
+          .replace(/\"/g, '&quot;');
 }
 
 // ── Plugin ─────────────────────────────────────────────────────────
@@ -249,16 +280,16 @@ class PassagePickerModal extends Modal {
     contentEl.empty();
     contentEl.addClass('bible-compare-picker');
 
-    const mode = this.singleMode ? '📖 Read' : '📖 Compare';
+    const mode = this.singleMode ? '\u{1F4D6} Read' : '\u{1F4D6} Compare';
     contentEl.createEl('h2', { text: mode });
     contentEl.createEl('p', {
-      text: 'Enter a passage (e.g. "Genesis 1", "John 3:16", "Psalms 23:1-6")',
+      text: 'Enter a passage (e.g. "Genesis 1", "John 3:16", "Psalms 23:1-6")\nMultiple: "John 3:1-4; 6:1" for same book, "Rom 12:1-2; 1 Cor 13" for different books.',
       cls: 'bible-compare-hint',
     });
 
     const input = contentEl.createEl('input', {
       type: 'text',
-      placeholder: 'e.g. Genesis 1 or John 3:16-18',
+      placeholder: 'e.g. Genesis 1 or John 3:16\u201318; 6:1',
       cls: 'bible-compare-input',
       value: this.passageInput,
     });
@@ -296,16 +327,16 @@ class PassagePickerModal extends Modal {
     if (!this.passageInput) { new Notice('Enter a passage reference.'); return; }
     if (this.selected.size < 1) { new Notice('Select at least one translation.'); return; }
 
-    const parsed = parsePassage(this.passageInput);
-    if (!parsed) {
-      new Notice('Could not parse passage. Try "Genesis 1" or "John 3:16-18".');
+    const parsed = parsePassages(this.passageInput);
+    if (!parsed || parsed.length === 0) {
+      new Notice('Could not parse passage. Try "Genesis 1" or "John 3:16-18" or "John 3:1-4; 6:1".');
       return;
     }
 
     this.close();
     this.plugin.openView({
-      passage: parsed,
-      passageStr: passageToString(parsed),
+      passages: parsed,
+      passageStr: this.passageInput,
       translations: Array.from(this.selected),
       translationLabels: this.translationDirs.reduce((m, t) => { m[t.path] = t.label; return m; }, {}),
     });
@@ -348,16 +379,17 @@ class BibleCompareView extends ItemView {
     // ── Top bar: nav + input ──────────────────────────────────────
     const topBar = contentEl.createDiv({ cls: 'bc-top-bar' });
 
-    // Previous chapter button
-    if (this.data) {
-      const prevCh = adjacentChapter(this.data.passage.bookNum, this.data.passage.chapter, -1);
+    // Previous chapter button — operates on first passage
+    const firstP = this.data ? this.data.passages[0] : null;
+    if (firstP) {
+      const prevCh = adjacentChapter(firstP.bookNum, firstP.chapter, -1);
       const prevBtn = topBar.createEl('button', {
-        text: '‹',
+        text: '\u2039',
         cls: 'bc-nav-btn bc-nav-prev',
-        attr: { title: prevCh ? `${this.data.passage.bookName} ${prevCh}` : 'No previous' },
+        attr: { title: prevCh ? `${firstP.bookName} ${prevCh}` : 'No previous' },
       });
       if (prevCh) {
-        prevBtn.addEventListener('click', () => this.goToChapter(this.data.passage.bookNum, prevCh));
+        prevBtn.addEventListener('click', () => this.goToChapter(firstP.bookNum, prevCh));
       } else {
         prevBtn.addClass('bc-nav-disabled');
       }
@@ -366,7 +398,7 @@ class BibleCompareView extends ItemView {
     // Passage input
     const input = topBar.createEl('input', {
       type: 'text',
-      placeholder: 'Genesis 1 or John 3:16 …',
+      placeholder: 'Genesis 1 or John 3:16 \u2026',
       cls: 'bc-passage-input',
       value: this.data ? this.data.passageStr : '',
     });
@@ -383,12 +415,11 @@ class BibleCompareView extends ItemView {
 
     // New picker button
     const pickBtn = topBar.createEl('button', {
-      text: '📖 Pick',
+      text: '\u{1F4D6} Pick',
       cls: 'bc-pick-btn',
       attr: { title: 'Open passage picker' },
     });
     pickBtn.addEventListener('click', () => {
-      // Show a small modal or re-use the picker
       new PassagePickerModal(this.app, this.plugin).open();
     });
 
@@ -402,16 +433,16 @@ class BibleCompareView extends ItemView {
       singleBtn.addEventListener('click', () => this.toggleSingleView());
     }
 
-    // Next chapter button
-    if (this.data) {
-      const nextCh = adjacentChapter(this.data.passage.bookNum, this.data.passage.chapter, 1);
+    // Next chapter button — operates on first passage
+    if (firstP) {
+      const nextCh = adjacentChapter(firstP.bookNum, firstP.chapter, 1);
       const nextBtn = topBar.createEl('button', {
-        text: '›',
+        text: '\u203A',
         cls: 'bc-nav-btn bc-nav-next',
-        attr: { title: nextCh ? `${this.data.passage.bookName} ${nextCh}` : 'No next' },
+        attr: { title: nextCh ? `${firstP.bookName} ${nextCh}` : 'No next' },
       });
       if (nextCh) {
-        nextBtn.addEventListener('click', () => this.goToChapter(this.data.passage.bookNum, nextCh));
+        nextBtn.addEventListener('click', () => this.goToChapter(firstP.bookNum, nextCh));
       } else {
         nextBtn.addClass('bc-nav-disabled');
       }
@@ -422,7 +453,7 @@ class BibleCompareView extends ItemView {
 
     if (!this.data) {
       this.contentArea.createEl('p', {
-        text: 'Use the passage input above or click 📖 Pick to compare translations.',
+        text: 'Use the passage input above or click \u{1F4D6} Pick to compare translations.',
         cls: 'bc-empty-hint',
       });
       return;
@@ -437,16 +468,16 @@ class BibleCompareView extends ItemView {
 
   // ── Load passage from all translations ──────────────────────────
   async loadPassage(raw) {
-    const parsed = parsePassage(raw);
-    if (!parsed) { new Notice('Could not parse passage.'); return; }
+    const parsed = parsePassages(raw);
+    if (!parsed || parsed.length === 0) { new Notice('Could not parse passage.'); return; }
 
     // Preserve translation selection from current state
     const translations = this.data ? this.data.translations : [];
     const labels = this.data ? this.data.translationLabels : {};
 
     this.data = {
-      passage: parsed,
-      passageStr: passageToString(parsed),
+      passages: parsed,
+      passageStr: raw,
       translations,
       translationLabels: labels,
     };
@@ -457,9 +488,11 @@ class BibleCompareView extends ItemView {
   async goToChapter(bookNum, chapter) {
     const bookName = BOOK_FOLDER_NAMES[bookNum].replace(/^\d+ - /, '');
     const parsed = { bookNum, bookName, chapter, verseStart: null, verseEnd: null };
+    // Replace only the first passage, keep any additional passages
+    const passages = [parsed, ...this.data.passages.slice(1)];
     this.data = {
-      passage: parsed,
-      passageStr: passageToString(parsed),
+      passages,
+      passageStr: this.data.passageStr,
       translations: this.data.translations,
       translationLabels: this.data.translationLabels,
     };
@@ -469,8 +502,6 @@ class BibleCompareView extends ItemView {
 
   toggleSingleView() {
     if (!this.data || !this.data.translations) return;
-    // Switch to just the first translation
-    const first = this.data.translations[0];
     new PassagePickerModal(this.app, this.plugin, { singleMode: true }).open();
   }
 
@@ -480,56 +511,61 @@ class BibleCompareView extends ItemView {
     contentArea.empty();
     contentArea.createEl('p', { text: 'Loading...', cls: 'bc-loading' });
 
-    const { passage, translations, translationLabels } = this.data;
-    const folderName = BOOK_FOLDER_NAMES[passage.bookNum];
+    const { passages, translations, translationLabels } = this.data;
     const results = [];
 
     for (const txPath of translations) {
       const label = translationLabels[txPath] || txPath;
-      const bookDir = `${txPath}/${folderName}`;
-      const folder = this.app.vault.getAbstractFileByPath(bookDir);
-      if (!folder || !folder.children) {
-        results.push({ label, error: 'Book folder not found' });
-        continue;
-      }
+      const chapters = [];
 
-      const chapFiles = folder.children.filter(c => c.extension === 'md');
-      const targetFile = chapFiles.find(f => {
-        const parts = f.name.replace(/\.md$/, '').split('-');
-        return parseInt(parts[parts.length - 1], 10) === passage.chapter;
-      });
-      const fallbackFile = !targetFile
-        ? chapFiles.find(f => isNaN(parseInt(f.name.replace(/\.md$/, '').split('-').pop(), 10)))
-        : null;
-
-      const file = targetFile || fallbackFile;
-      if (!file) {
-        results.push({ label, error: `Chapter ${passage.chapter} not found` });
-        continue;
-      }
-
-      const content = await this.app.vault.read(file);
-      const allVerses = parseChapter(content);
-      const verseKeys = Object.keys(allVerses).map(Number).sort((a, b) => a - b);
-
-      let verses;
-      if (passage.verseStart !== null) {
-        verses = {};
-        const end = passage.verseEnd || passage.verseStart;
-        for (let v = passage.verseStart; v <= end; v++) {
-          if (allVerses[v] !== undefined) verses[v] = allVerses[v];
-        }
-        if (Object.keys(verses).length === 0) {
-          results.push({ label, error: `Verses not found` });
+      for (const passage of passages) {
+        const folderName = BOOK_FOLDER_NAMES[passage.bookNum];
+        const bookDir = `${txPath}/${folderName}`;
+        const folder = this.app.vault.getAbstractFileByPath(bookDir);
+        if (!folder || !folder.children) {
+          chapters.push({ chapter: passage.chapter, error: 'Book folder not found' });
           continue;
         }
-      } else {
-        verses = allVerses;
+
+        const chapFiles = folder.children.filter(c => c.extension === 'md');
+        const targetFile = chapFiles.find(f => {
+          const parts = f.name.replace(/\.md$/, '').split('-');
+          return parseInt(parts[parts.length - 1], 10) === passage.chapter;
+        });
+
+        // ponytail: fallback for non-standard filenames (e.g. no numeric suffix)
+        const fallbackFile = !targetFile
+          ? chapFiles.find(f => isNaN(parseInt(f.name.replace(/\.md$/, '').split('-').pop(), 10)))
+          : null;
+
+        const file = targetFile || fallbackFile;
+        if (!file) {
+          chapters.push({ chapter: passage.chapter, error: `Chapter ${passage.chapter} not found` });
+          continue;
+        }
+
+        const content = await this.app.vault.read(file);
+        const allVerses = parseChapter(content);
+        const verseKeys = Object.keys(allVerses).map(Number).sort((a, b) => a - b);
+
+        let verses;
+        if (passage.verseStart !== null) {
+          verses = {};
+          const end = passage.verseEnd || passage.verseStart;
+          for (let v = passage.verseStart; v <= end; v++) {
+            if (allVerses[v] !== undefined) verses[v] = allVerses[v];
+          }
+          if (Object.keys(verses).length === 0) {
+            chapters.push({ chapter: passage.chapter, error: 'Verses not found' });
+            continue;
+          }
+        } else {
+          verses = allVerses;
+        }
+        chapters.push({ chapter: passage.chapter, verses });
       }
-
-      results.push({ label, verses });
+      results.push({ label, chapters });
     }
-
     this.loadedData = results;
     await this.renderContent();
   }
@@ -548,9 +584,10 @@ class BibleCompareView extends ItemView {
     const headRow = contentArea.createDiv({ cls: 'bc-head-row' });
     headRow.createEl('h2', { text: data.passageStr, cls: 'bc-passage-heading' });
 
-    // Chapter nav pills
-    const bookNum = data.passage.bookNum;
-    const curCh = data.passage.chapter;
+    // Chapter nav pills — first passage only
+    const firstPassage = data.passages[0];
+    const bookNum = firstPassage.bookNum;
+    const curCh = firstPassage.chapter;
     const navPills = headRow.createDiv({ cls: 'bc-chapter-pills' });
     const maxCh = MAX_CHAPTERS[bookNum] || 50;
     const start = Math.max(1, curCh - 5);
@@ -565,9 +602,17 @@ class BibleCompareView extends ItemView {
       }
     }
 
+    // Multi-passage indicator
+    if (data.passages.length > 1) {
+      headRow.createEl('span', {
+        text: `${data.passages.length} passages`,
+        cls: 'bc-multi-tag',
+      });
+    }
+
     // Copy button
     const copyBtn = headRow.createEl('button', {
-      text: '📋',
+      text: '\u{1F4CB}',
       cls: 'bc-copy-btn',
       attr: { title: 'Copy to clipboard' },
     });
@@ -582,31 +627,45 @@ class BibleCompareView extends ItemView {
       const col = grid.createDiv({ cls: 'bc-col' });
       col.createEl('h3', { text: r.label, cls: 'bc-col-label' });
 
-      if (r.error) {
-        col.createEl('p', { text: r.error, cls: 'bc-col-error' });
-        continue;
+      for (let ci = 0; ci < r.chapters.length; ci++) {
+        const ch = r.chapters[ci];
+
+        if (ch.error) {
+          col.createEl('p', { text: ch.error, cls: 'bc-col-error' });
+          continue;
+        }
+
+        // Chapter separator for multi-passage results
+        const multiChapter = r.chapters.length > 1;
+        if (multiChapter) {
+          const sep = col.createDiv({ cls: 'bc-chapter-sep' });
+          sep.createEl('span', { text: `\u2014 ${ch.chapter} \u2014`, cls: 'bc-chapter-sep-label' });
+        }
+
+        const para = col.createDiv({ cls: 'bc-para' });
+        const verseKeys = Object.keys(ch.verses).map(Number).sort((a, b) => a - b);
+
+        let md = '';
+        if (verseKeys.length === 1) {
+          md = ch.verses[verseKeys[0]] || '';
+        } else {
+          verseKeys.forEach((vk, i) => {
+            if (i > 0) md += ' ';
+            if (multiChapter) {
+              // Chapter-aware labels: "3:1" "3:2" ...
+              md += `**${ch.chapter}:${vk}** ${ch.verses[vk]}`;
+            } else if (isSingle) {
+              md += `**${vk}** ${ch.verses[vk]}`;
+            } else {
+              md += ch.verses[vk];
+            }
+          });
+        }
+
+        if (md) {
+          await MarkdownRenderer.render(this.app, md, para, '', this);
+        }
       }
-
-      const para = col.createDiv({ cls: 'bc-para' });
-      const verseKeys = Object.keys(r.verses).map(Number).sort((a, b) => a - b);
-
-      // Build markdown text for Obsidian's renderer
-      let md = '';
-      if (isSingle && verseKeys.length > 1) {
-        verseKeys.forEach((vk, i) => {
-          if (i > 0) md += ' ';
-          md += `**${vk}** ${r.verses[vk]}`;
-        });
-      } else if (verseKeys.length > 1) {
-        verseKeys.forEach((vk, i) => {
-          if (i > 0) md += ' ';
-          md += r.verses[vk];
-        });
-      } else {
-        md = r.verses[verseKeys[0]] || '';
-      }
-
-      await MarkdownRenderer.render(this.app, md, para, '', this);
     }
   }
 
@@ -617,12 +676,17 @@ class BibleCompareView extends ItemView {
     this.loadedData.forEach(r => {
       if (r.error) return;
       txt += `**${r.label}**\n`;
-      const vk = Object.keys(r.verses).map(Number).sort((a, b) => a - b);
-      if (vk.length > 1) {
-        vk.forEach(k => { txt += `[${k}] ${r.verses[k]}\n`; });
-      } else {
-        txt += r.verses[vk[0]] + '\n';
-      }
+      r.chapters.forEach((ch, ci) => {
+        const multiChapter = r.chapters.length > 1;
+        if (ci > 0) txt += `\u2014 Chapter ${ch.chapter} \u2014\n`;
+        const vk = Object.keys(ch.verses).map(Number).sort((a, b) => a - b);
+        if (vk.length > 0) {
+          vk.forEach(k => {
+            const label = multiChapter ? `${ch.chapter}:${k}` : k;
+            txt += `[${label}] ${ch.verses[k]}\n`;
+          });
+        }
+      });
       txt += '\n';
     });
     try {
