@@ -342,6 +342,7 @@ class PassagePickerModal extends Modal {
       passageStr: this.passageInput,
       translations: Array.from(this.selected),
       translationLabels: this.translationDirs.reduce((m, t) => { m[t.path] = t.label; return m; }, {}),
+      allTranslations: this.translationDirs,
     });
   }
 }
@@ -483,6 +484,7 @@ class BibleCompareView extends ItemView {
       passageStr: raw,
       translations,
       translationLabels: labels,
+      allTranslations: this.data ? this.data.allTranslations : null,
     };
     this.loadedData = null;
     this.render();
@@ -498,6 +500,7 @@ class BibleCompareView extends ItemView {
       passageStr: this.data.passageStr,
       translations: this.data.translations,
       translationLabels: this.data.translationLabels,
+      allTranslations: this.data.allTranslations,
     };
     this.loadedData = null;
     this.render();
@@ -628,7 +631,30 @@ class BibleCompareView extends ItemView {
 
     for (const r of results) {
       const col = grid.createDiv({ cls: 'bc-col' });
-      col.createEl('h3', { text: r.label, cls: 'bc-col-label' });
+      const headerRow = col.createDiv({ cls: 'bc-col-header' });
+      headerRow.createEl('h3', { text: r.label, cls: 'bc-col-label' });
+
+      // Translation swap dropdown
+      if (data.allTranslations && data.allTranslations.length > 0) {
+        const others = data.allTranslations.filter(t => !data.translations.includes(t.path));
+        if (others.length > 0) {
+          const swapSel = headerRow.createEl('select', { cls: 'bc-swap-select' });
+          swapSel.createEl('option', { text: '\u21C4', value: '', disabled: true, selected: true });
+          others.forEach(t => {
+            swapSel.createEl('option', { text: t.label, value: t.path });
+          });
+          swapSel.addEventListener('change', (e) => {
+            const ci = results.indexOf(r);
+            const oldPath = data.translations[ci];
+            const newPath = e.target.value;
+            const tx = data.allTranslations.find(t => t.path === newPath);
+            data.translations[ci] = newPath;
+            data.translationLabels[newPath] = tx ? tx.label : newPath;
+            this.loadedData = null;
+            this.render();
+          });
+        }
+      }
 
       for (let ci = 0; ci < r.chapters.length; ci++) {
         const ch = r.chapters[ci];
