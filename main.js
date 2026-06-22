@@ -686,7 +686,7 @@ class BibleCompareView extends ItemView {
       r.chapters.forEach((ch, ci) => {
         const multiChapter = r.chapters.length > 1;
         if (ci > 0) {
-          const bookName = data.passages[ci].bookName;
+          const bookName = this.data.passages[ci].bookName;
           txt += `\u2014 ${bookName} ${ch.chapter} \u2014\n`;
         }
         const vk = Object.keys(ch.verses).map(Number).sort((a, b) => a - b);
