@@ -135,14 +135,27 @@ function parsePassages(raw) {
   for (const seg of segments) {
     let parsed = parsePassage(seg);
     if (!parsed && lastBookNum !== null) {
-      // Continuation: "6" or "6:1-4" without a book name
-      const m = seg.match(/^(\d+)(?::(\d+)(?:\s*-\s*(\d+))?)?$/);
-      if (m) {
-        const chapter = parseInt(m[1], 10);
-        const verseStart = m[2] ? parseInt(m[2], 10) : null;
-        const verseEnd = m[3] ? parseInt(m[3], 10) : verseStart;
+      const lastPassage = results[results.length - 1];
+      // Continuation: verse range in same chapter — "8-13"
+      const vr = seg.match(/^(\d+)\s*-\s*(\d+)$/);
+      if (vr) {
         const bookName = BOOK_FOLDER_NAMES[lastBookNum].replace(/^\d+ - /, '');
-        parsed = { bookNum: lastBookNum, bookName, chapter, verseStart, verseEnd };
+        parsed = {
+          bookNum: lastBookNum, bookName,
+          chapter: lastPassage.chapter,
+          verseStart: parseInt(vr[1], 10),
+          verseEnd: parseInt(vr[2], 10),
+        };
+      } else {
+        // Continuation: chapter ref — "6" or "6:1-4"
+        const m = seg.match(/^(\d+)(?::(\d+)(?:\s*-\s*(\d+))?)?$/);
+        if (m) {
+          const chapter = parseInt(m[1], 10);
+          const verseStart = m[2] ? parseInt(m[2], 10) : null;
+          const verseEnd = m[3] ? parseInt(m[3], 10) : verseStart;
+          const bookName = BOOK_FOLDER_NAMES[lastBookNum].replace(/^\d+ - /, '');
+          parsed = { bookNum: lastBookNum, bookName, chapter, verseStart, verseEnd };
+        }
       }
     }
     if (!parsed) return null;
