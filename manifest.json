@@ -5,5 +5,5 @@
   "minAppVersion": "0.15.0",
   "description": "Compare Bible translations side-by-side. Multi-passage support (\"John 3:16; 6:1\"), in-view column swapping, chapter navigation.",
   "author": "cansas",
-  "isDesktopOnly": true
+  "isDesktopOnly": false
 }
